@@ -16,3 +16,4 @@ scipy
 scikit-image
 wandb
 open3d
+black
