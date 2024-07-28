@@ -4,6 +4,7 @@ import jax.numpy as jnp
 import flax
 from typing import Optional
 
+
 @flax.struct.dataclass
 class NewtonState:
     # variables
@@ -24,6 +25,7 @@ class NewtonState:
     # True if algorithm has converged
     converged: bool
 
+
 @flax.struct.dataclass
 class NewtonConfig:
     # maximum number of iterations
@@ -35,10 +37,11 @@ class NewtonConfig:
     # weather to stop when convergence critera is reached
     stop_when_converged: bool = False
 
+
 def newton_step(laplacian, config: NewtonConfig, args, state: NewtonState):
     z_next = state.z - jnp.linalg.lstsq(state.H, state.g)[0]
-    g_next=jax.grad(laplacian, argnums=-1)(*args, z_next)
-    H_next=jax.hessian(laplacian, argnums=-1)(*args, z_next)
+    g_next = jax.grad(laplacian, argnums=-1)(*args, z_next)
+    H_next = jax.hessian(laplacian, argnums=-1)(*args, z_next)
     return NewtonState(
         z=z_next,
         z_steps=state.z_steps.at[state.step + 1].set(z_next),
@@ -48,11 +51,13 @@ def newton_step(laplacian, config: NewtonConfig, args, state: NewtonState):
         converged=jnp.linalg.norm(g_next) < config.grad_norm_eps,
     )
 
+
 def should_continue(config: NewtonConfig, state: NewtonState):
     return jnp.logical_and(
         state.step < config.max_iters,
         jnp.logical_not(jnp.logical_and(state.converged, config.stop_when_converged)),
     )
+
 
 def _newton_kkt(laplacian, config: NewtonConfig, z0, *args):
     """Find kkt point z* where dL(params, z*)/dz = 0 using Newton's method."""
@@ -60,7 +65,9 @@ def _newton_kkt(laplacian, config: NewtonConfig, z0, *args):
     H0 = jax.hessian(laplacian, argnums=-1)(*args, z0)
     init_state = NewtonState(
         z=z0,
-        z_steps=jnp.repeat(jnp.zeros_like(z0)[None], config.max_iters+1, axis=0).at[0].set(z0),
+        z_steps=jnp.repeat(jnp.zeros_like(z0)[None], config.max_iters + 1, axis=0)
+        .at[0]
+        .set(z0),
         step=0,
         g=g0,
         H=H0,
@@ -73,9 +80,11 @@ def _newton_kkt(laplacian, config: NewtonConfig, z0, *args):
     )
     return final_state.z, final_state
 
+
 def newton_kkt_fwd(laplacian, config: NewtonConfig, z0, *args):
     z, final_state = _newton_kkt(laplacian, config, z0, *args)
     return (z, final_state), (final_state, args)
+
 
 def newton_kkt_bwd(laplacian, config: NewtonConfig, info, tangent):
     final_state, args = info
@@ -87,7 +96,11 @@ def newton_kkt_bwd(laplacian, config: NewtonConfig, info, tangent):
     )(args)
 
     # gradient wrt z0 is 0
-    return (0., *jvp,)
+    return (
+        0.0,
+        *jvp,
+    )
+
 
 newton_kkt = jax.custom_vjp(_newton_kkt, nondiff_argnums=(0, 1))
 newton_kkt.defvjp(newton_kkt_fwd, newton_kkt_bwd)

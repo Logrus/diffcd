@@ -5,14 +5,15 @@ from typing import Literal, Union, Tuple, Optional
 import jax.numpy as jnp
 import jax.random as jrnd
 
+
 @dataclass
 class Circle:
     n_points: int = 50
     n_points_eval: int = 250
-    radius: float = 2.
+    radius: float = 2.0
     sigma: float = 0.5
-    lower_bound:Tuple[float, float] = (-3., -3.)
-    upper_bound:Tuple[float, float] = (3., 3.)
+    lower_bound: Tuple[float, float] = (-3.0, -3.0)
+    upper_bound: Tuple[float, float] = (3.0, 3.0)
     n_dims: Literal[2] = 2
 
     def get_data(self, key):
@@ -42,7 +43,7 @@ class PointCloud:
     n_points: Optional[int] = None
 
     # Standard deviation of gaussian noise to add to each point
-    sigma: float = 0.
+    sigma: float = 0.0
 
     # If true, subtract center of bounding box from point cloud and then divide my maximum side length
     auto_scale: bool = True
@@ -64,7 +65,7 @@ class PointCloud:
             return points
 
     def get_normalized_points(self, key):
-        extensions = ['.npy', '.xyz']
+        extensions = [".npy", ".xyz"]
         if self.path.suffix in extensions:
             point_cloud = jnp.load(self.path)
 
@@ -77,11 +78,13 @@ class PointCloud:
                 self._scale_factor = (upper - lower).max()
             else:
                 self._center_point = jnp.zeros(3, dtype=jnp.float32)
-                self._scale_factor = 1.
+                self._scale_factor = 1.0
 
             point_cloud = self.apply_normalization(point_cloud)
         else:
-            raise ValueError(f'File extension {self.path.suffix} not recognized for file {self.path}. Expected {extensions}')
+            raise ValueError(
+                f"File extension {self.path.suffix} not recognized for file {self.path}. Expected {extensions}"
+            )
 
         point_cloud += jrnd.normal(key, point_cloud.shape) * self.sigma
         return point_cloud

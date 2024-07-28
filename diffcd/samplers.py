@@ -26,7 +26,8 @@ class SamplingConfig:
     global_samples: Optional[int] = None
 
     # scale to apply to local sigma
-    local_sigma_scale: float = .2
+    local_sigma_scale: float = 0.2
+
 
 @flax.struct.dataclass
 class SurfaceSamplingConfig:
@@ -42,6 +43,7 @@ class SurfaceSamplingConfig:
     # config for mesh computation
     surface_meshing: meshing.Meshing = field(default_factory=lambda: meshing.Meshing())
 
+
 @partial(jax.jit, static_argnames=("n_points", "n_dims"))
 def generate_global_samples(key, lower, upper, n_points, n_dims):
     return jrnd.uniform(
@@ -51,21 +53,25 @@ def generate_global_samples(key, lower, upper, n_points, n_dims):
         maxval=jnp.array(upper),
     )
 
+
 @partial(jax.jit, static_argnames="samples_per_point")
 def generate_local_samples(key, query_points, samples_per_point, local_sigma):
     num_points, dims = query_points.shape
     noise = jrnd.normal(key, (num_points, samples_per_point, dims))
-    query_samples = query_points[:, None, :] +  noise * local_sigma[:, None, None]
+    query_samples = query_points[:, None, :] + noise * local_sigma[:, None, None]
     return jnp.reshape(query_samples, (-1, dims))
 
-@partial(jax.jit, static_argnames='n_samples')
+
+@partial(jax.jit, static_argnames="n_samples")
 def sample_array(key, array, n_samples):
     sample_indices = jrnd.choice(
-        key, len(array),
+        key,
+        len(array),
         (min(n_samples, len(array)),),
         replace=False,
     )
     return array[sample_indices], sample_indices
+
 
 def compute_local_sigma(points, k):
     if k >= len(points):
@@ -81,14 +87,17 @@ def compute_local_sigma(points, k):
         sigmas.append(distances[0][:, -1])
     return np.concatenate(sigmas)
 
+
 @flax.struct.dataclass
 class DescentState:
     i: int
     x: jnp.array
 
+
 def step(apply_fn, params, state):
     f, g = jax.value_and_grad(apply_fn, argnums=1)(params, state.x)
-    return DescentState(state.i+1, state.x - f * g / jnp.linalg.norm(g))
+    return DescentState(state.i + 1, state.x - f * g / jnp.linalg.norm(g))
+
 
 @partial(jax.jit, static_argnames=["apply_fn", "n_steps"])
 def sdf_descent(apply_fn, params, query_point, n_steps):
@@ -101,10 +110,14 @@ def sdf_descent(apply_fn, params, query_point, n_steps):
     f = apply_fn(params, state.x)
     return state.x, jnp.abs(f) < 1e-3
 
+
 @partial(jax.jit, static_argnames=["f", "newton_config"])
 def generate_surface_samples(f, params, mesh_samples, newton_config: NewtonConfig):
     """Generate samples from implicit surface defined by f(params, x) = 0 by sampling from approxmiating mesh and computing a neary surface point."""
     surface_points, valid = jax.vmap(sdf_descent, in_axes=(None, None, 0, None))(
-        f, params, mesh_samples, newton_config.max_iters,
+        f,
+        params,
+        mesh_samples,
+        newton_config.max_iters,
     )
     return surface_points, valid
