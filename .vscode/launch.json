@@ -1,0 +1,21 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Fit implicit",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "fit_implicit.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--output-dir",
+                "outputs",
+                "--dataset.path",
+                "data/famous_dense/04_pts/angel.xyz.npy",
+            ]
+        }
+    ]
+}
